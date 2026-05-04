@@ -1,2 +1,8 @@
 (Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
 Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory | Select-Object -First 30 Name
+
+Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory |
+  Select-Object Name, FullName |
+  Export-Csv "$env:TEMP\nuget-cache-before-clear.csv" -NoTypeInformation
+
+Test-Path "$env:TEMP\nuget-cache-before-clear.csv"
