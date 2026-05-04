@@ -39,7 +39,21 @@ C:\Users\rt.OneIMTools.DEV\.nuget\packages
 7. If packages changed, update the repository package folder and manifest.
 8. For non-DEV compile, point `ExternalNugetSource` to the promoted local package folder.
 
-## Clean The Build Account
+The script in this repository automates the repeatable parts:
+
+```powershell
+.\scripts\Capture-OimNuGetPackages.ps1 -Prepare
+# Run OIM compile
+.\scripts\Capture-OimNuGetPackages.ps1 -Generate -RepoNuGetRoot .\nuget -CopyPackages
+```
+
+Use `-ClearAssemblyCache -Force` only on a dedicated build account/agent with all OIM tools closed:
+
+```powershell
+.\scripts\Capture-OimNuGetPackages.ps1 -Prepare -ClearAssemblyCache -Force
+```
+
+## Manual: Clean The Build Account
 
 Clear NuGet caches:
 
@@ -55,7 +69,7 @@ Remove-Item $assemblyCache -Recurse -Force
 
 Only run this when all OIM tools for the build account are closed.
 
-## Compile
+## Manual: Compile
 
 Run the normal OIM database compile.
 
@@ -67,7 +81,7 @@ For automation, validate `DBCompilerCMD.exe` with the real DEV connection/auth c
 
 The command-line compiler supports database compilation using `/Conn` and `/Auth`. The exact pipeline command must use secured credentials and must be validated against the same compile behavior as the GUI compile.
 
-## Generate Full Manifest
+## Manual: Generate Full Manifest
 
 Generate the full package manifest from `global-packages` after the clean compile:
 
@@ -96,7 +110,7 @@ Verify:
 Import-Csv "$env:TEMP\nuget-packages-manifest.csv" | Select-Object -First 20
 ```
 
-## Generate OIM Baseline Manifest
+## Manual: Generate OIM Baseline Manifest
 
 OIM vendor packages are shipped in the installation `NuGet` folder. Generate the baseline manifest from those `.nupkg` files:
 
@@ -118,7 +132,7 @@ Get-ChildItem "$oimpath\NuGet" -Filter *.nupkg |
   Export-Csv "$env:TEMP\oim-v10-baseline-packages.csv" -NoTypeInformation
 ```
 
-## Generate External Delta Manifest
+## Manual: Generate External Delta Manifest
 
 The external delta is the package/version set restored by the clean compile but not present in the OIM installation baseline.
 
