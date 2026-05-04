@@ -18,3 +18,18 @@ $delta = $after | Where-Object { $_ -notin $baseline }
 $delta | Sort-Object | Set-Content "$env:TEMP\nuget-delta-after-compile.txt"
 
 $delta | Sort-Object | Select-Object -First 80
+
+
+
+$delta |
+  Sort-Object |
+  ForEach-Object {
+    $parts = $_ -split "\|", 2
+    [PSCustomObject]@{
+      PackageId = $parts[0]
+      Version = $parts[1]
+      Classification = "external-delta"
+      Evidence = "Restored into global-packages after clean DEV compile"
+    }
+  } |
+  Export-Csv "$env:TEMP\nuget-delta-after-compile.csv" -NoTypeInformation
