@@ -1,1 +1,2 @@
 (Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
+Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory | Select-Object -First 30 Name
