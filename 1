@@ -1,8 +1,20 @@
-(Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Recurse -ErrorAction SilentlyContinue | Measure-Object).Count
-Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory | Select-Object -First 30 Name
+$baseline = Get-ChildItem "$oimpath\NuGet" -Filter *.nupkg |
+  ForEach-Object {
+    if ($_.BaseName -match "^(?<id>.+)\.(?<version>\d+\.\d+\.\d+-\d+)$") {
+      "$($matches.id.ToLowerInvariant())|$($matches.version)"
+    }
+  }
 
-Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory |
-  Select-Object Name, FullName |
-  Export-Csv "$env:TEMP\nuget-cache-before-clear.csv" -NoTypeInformation
+$after = Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory |
+  ForEach-Object {
+    $pkg = $_.Name
+    Get-ChildItem $_.FullName -Directory | ForEach-Object {
+      "$($pkg.ToLowerInvariant())|$($_.Name)"
+    }
+  }
 
-Test-Path "$env:TEMP\nuget-cache-before-clear.csv"
+$delta = $after | Where-Object { $_ -notin $baseline }
+
+$delta | Sort-Object | Set-Content "$env:TEMP\nuget-delta-after-compile.txt"
+
+$delta | Sort-Object | Select-Object -First 80
