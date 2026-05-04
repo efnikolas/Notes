@@ -5,8 +5,10 @@ param(
     [string]$AssemblyCache = "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache",
     [string]$OutputDir = "$env:TEMP\oim-nuget-capture",
     [string]$RepoNuGetRoot,
+    [int]$DepsJsonLookbackHours = 24,
     [switch]$Prepare,
     [switch]$Generate,
+    [switch]$CompareDepsJson,
     [switch]$CopyPackages,
     [switch]$ClearAssemblyCache,
     [switch]$Force
@@ -64,6 +66,44 @@ function Get-OimBaselineManifest {
     } | Sort-Object PackageId, Version
 }
 
+function Get-DepsJsonPackageManifest {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][datetime]$Since
+    )
+
+    if (-not (Test-Path $Path)) {
+        throw "OIM AssemblyCache path not found: $Path"
+    }
+
+    $depsFiles = @(
+        Get-ChildItem $Path -Recurse -Filter *.deps.json -File -ErrorAction SilentlyContinue |
+            Where-Object { $_.LastWriteTime -ge $Since }
+    )
+
+    foreach ($file in $depsFiles) {
+        $json = Get-Content $file.FullName -Raw | ConvertFrom-Json
+        if (-not $json.libraries) {
+            continue
+        }
+
+        foreach ($library in $json.libraries.PSObject.Properties) {
+            if ($library.Value.type -ne "package") {
+                continue
+            }
+
+            if ($library.Name -match "^(?<id>.+)/(?<version>[^/]+)$") {
+                [PSCustomObject]@{
+                    PackageId      = $matches.id
+                    Version        = $matches.version
+                    Classification = "deps-json-package"
+                    Source         = $file.FullName
+                }
+            }
+        }
+    }
+}
+
 function Compare-PackageManifest {
     param(
         [Parameter(Mandatory = $true)]$NewManifest,
@@ -79,12 +119,13 @@ function Compare-PackageManifest {
     }
 }
 
-if (-not $Prepare -and -not $Generate) {
+if (-not $Prepare -and -not $Generate -and -not $CompareDepsJson) {
     Write-Host "No phase selected. Use -Prepare before compile, then -Generate after compile."
     Write-Host "Example:"
     Write-Host "  .\scripts\Capture-OimNuGetPackages.ps1 -Prepare"
     Write-Host "  # run OIM compile"
     Write-Host "  .\scripts\Capture-OimNuGetPackages.ps1 -Generate -RepoNuGetRoot .\nuget -CopyPackages"
+    Write-Host "  .\scripts\Capture-OimNuGetPackages.ps1 -CompareDepsJson"
     Write-Host ""
     Write-Host "Without -CopyPackages, -Generate only writes manifest CSVs to -OutputDir."
     Write-Host "Commit generated manifests/package folder to the backend repository in a later step."
@@ -186,5 +227,49 @@ if ($Generate) {
     else {
         Write-Host "No -RepoNuGetRoot provided. Manifests were generated only in: $OutputDir"
         Write-Host "Commit these manifests and the promoted package folder to the backend repository in a later step."
+    }
+}
+
+if ($CompareDepsJson) {
+    New-Item -ItemType Directory -Force -Path $OutputDir | Out-Null
+
+    $since = (Get-Date).AddHours(-1 * $DepsJsonLookbackHours)
+    Write-Host "Generating global-packages manifest from: $CachePath"
+    $globalManifest = @(Get-GlobalPackagesManifest -Path $CachePath)
+
+    Write-Host "Generating deps.json manifest from: $AssemblyCache"
+    Write-Host "Only deps.json files changed since $since are included."
+    $depsManifest = @(
+        Get-DepsJsonPackageManifest -Path $AssemblyCache -Since $since |
+            Sort-Object PackageId, Version -Unique
+    )
+
+    $globalPath = Join-Path $OutputDir "nuget-packages-manifest.csv"
+    $depsPath = Join-Path $OutputDir "deps-json-packages-manifest.csv"
+    $missingPath = Join-Path $OutputDir "deps-json-missing-global-packages.txt"
+    $extraPath = Join-Path $OutputDir "deps-json-extra-packages.txt"
+
+    $globalManifest | Export-Csv $globalPath -NoTypeInformation
+    $depsManifest | Export-Csv $depsPath -NoTypeInformation
+
+    $globalKeys = $globalManifest | ForEach-Object { New-PackageKey -PackageId $_.PackageId -Version $_.Version }
+    $depsKeys = $depsManifest | ForEach-Object { New-PackageKey -PackageId $_.PackageId -Version $_.Version }
+
+    $missingFromDeps = @($globalKeys | Where-Object { $_ -notin $depsKeys } | Sort-Object)
+    $extraInDeps = @($depsKeys | Where-Object { $_ -notin $globalKeys } | Sort-Object)
+
+    $missingFromDeps | Set-Content $missingPath
+    $extraInDeps | Set-Content $extraPath
+
+    Write-Host "Global manifest:             $globalPath ($($globalManifest.Count) entries)"
+    Write-Host "deps.json manifest:          $depsPath ($($depsManifest.Count) entries)"
+    Write-Host "In global but not deps.json: $($missingFromDeps.Count) ($missingPath)"
+    Write-Host "In deps.json but not global: $($extraInDeps.Count) ($extraPath)"
+
+    if ($missingFromDeps.Count -eq 0 -and $extraInDeps.Count -eq 0) {
+        Write-Host "Result: deps.json matches global-packages for this compile window."
+    }
+    else {
+        Write-Host "Result: deps.json does not fully match global-packages. Keep global-packages as source of truth until differences are explained."
     }
 }
