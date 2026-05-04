@@ -51,6 +51,18 @@ The script in this repository automates the repeatable parts:
 
 If `-CopyPackages` is not used, review the generated manifests and commit the package folder/manifests to the backend repository in a separate step.
 
+To validate the alternative `.deps.json` approach after a compile:
+
+```powershell
+.\scripts\Capture-OimNuGetPackages.ps1 -CompareDepsJson
+```
+
+Use a wider lookback window if the compile happened earlier:
+
+```powershell
+.\scripts\Capture-OimNuGetPackages.ps1 -CompareDepsJson -DepsJsonLookbackHours 72
+```
+
 Use `-ClearAssemblyCache -Force` only on a dedicated build account/agent with all OIM tools closed:
 
 ```powershell
@@ -66,6 +78,34 @@ clean cache -> compile -> generate fresh manifest -> compare with repo manifest
 ```
 
 A pre-compile diff can only compare the existing repository manifest with some previously generated manifest. It cannot know whether the current code introduces new transitive dependencies until OIM compile/restore has run.
+
+## Alternative: Compare deps.json With Cache Manifest
+
+OIM updates script assembly `.deps.json` files during compilation. These files can be used as a candidate source for the package manifest, but they must be validated against the packages restored into `global-packages`.
+
+Run this after a compile:
+
+```powershell
+.\scripts\Capture-OimNuGetPackages.ps1 -CompareDepsJson
+```
+
+The script writes these files to `-OutputDir`:
+
+```text
+nuget-packages-manifest.csv
+deps-json-packages-manifest.csv
+deps-json-missing-global-packages.txt
+deps-json-extra-packages.txt
+```
+
+Interpretation:
+
+- `deps-json-missing-global-packages.txt` means packages existed in `global-packages` but were not found in the fresh `.deps.json` files.
+- `deps-json-extra-packages.txt` means packages were found in `.deps.json` but not in `global-packages`.
+- If both diff files are empty, the `.deps.json` method matches the clean compile cache for that run.
+- If either diff file has entries, keep using `global-packages` as the source of truth until the differences are understood.
+
+This comparison does not copy packages into the repository. It only proves whether the `.deps.json` method can replace or support the cache-manifest method.
 
 ## Manual: Clean The Build Account
 
