@@ -6,3 +6,18 @@ $localSource = "$pocRoot\LocalNuGetSource"
 New-Item -ItemType Directory -Force -Path $localSource
 
 Test-Path $localSource
+
+
+
+
+
+New-Item -Path "HKCU:\SOFTWARE\One Identity\One Identity Manager\Global\Compiler" -Force
+
+New-ItemProperty `
+  -Path "HKCU:\SOFTWARE\One Identity\One Identity Manager\Global\Compiler" `
+  -Name "ExternalNugetSource" `
+  -Value $localSource `
+  -PropertyType String `
+  -Force
+
+Get-ItemProperty "HKCU:\SOFTWARE\One Identity\One Identity Manager\Global\Compiler"
