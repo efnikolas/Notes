@@ -1,63 +1,8 @@
+$oimpath = "D:\Program Files\OneIdentity\One Identity Manager v10"
+$cache = "C:\Users\rt.OneIMTools.DEV\.nuget\packages"
+$pocRoot = "D:\NuGet-PoC"
+$localSource = "$pocRoot\LocalNuGetSource"
 
-Get-ChildItem "$env:USERPROFILE" -Recurse -Filter NuGet.Config -ErrorAction SilentlyContinue |
-  Select-Object FullName, LastWriteTime |
-  Sort-Object LastWriteTime -Descending |
-  Select-Object -First 30
+New-Item -ItemType Directory -Force -Path $localSource
 
-
-
-
-
-Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -File -ErrorAction SilentlyContinue | Select-String -Pattern "ExternalNugetSource","nexus","nuget.org" | Select-Object Path, LineNumber, Line
-
-
-
-
-$baseline = Get-ChildItem "$oimpath\NuGet" -Filter *.nupkg |
-  ForEach-Object {
-    if ($_.BaseName -match "^(?<id>.+)\.(?<version>\d+\.\d+\.\d+-\d+)$") {
-      "$($matches.id.ToLowerInvariant())|$($matches.version)"
-    }
-  }
-
-$after = Get-ChildItem "C:\Users\rt.OneIMTools.DEV\.nuget\packages" -Directory |
-  ForEach-Object {
-    $pkg = $_.Name
-    Get-ChildItem $_.FullName -Directory | ForEach-Object {
-      "$($pkg.ToLowerInvariant())|$($_.Name)"
-    }
-  }
-
-$delta = $after | Where-Object { $_ -notin $baseline }
-
-$delta | Sort-Object | Set-Content "$env:TEMP\nuget-delta-after-compile.txt"
-
-$delta | Sort-Object | Select-Object -First 80
-
-
-
-$delta |
-  Sort-Object |
-  ForEach-Object {
-    $parts = $_ -split "\|", 2
-    [PSCustomObject]@{
-      PackageId = $parts[0]
-      Version = $parts[1]
-      Classification = "external-delta"
-      Evidence = "Restored into global-packages after clean DEV compile"
-    }
-  } |
-  Export-Csv "$env:TEMP\nuget-delta-after-compile.csv" -NoTypeInformation
-
-
-$after |
-  Sort-Object |
-  ForEach-Object {
-    $parts = $_ -split "\|", 2
-    [PSCustomObject]@{
-      PackageId = $parts[0]
-      Version = $parts[1]
-      Evidence = "Present in global-packages after clean DEV compile"
-    }
-  } |
-  Export-Csv "$env:TEMP\nuget-all-after-compile.csv" -NoTypeInformation
+Test-Path $localSource
