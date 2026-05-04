@@ -1,8 +1,6 @@
-Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -Filter nuget.config -ErrorAction SilentlyContinue | Select-Object FullName
-
-
-
-
+Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -File -ErrorAction SilentlyContinue |
+  Select-String -Pattern "ExternalNugetSource|nexus|nuget.org" -SimpleMatch |
+  Select-Object Path, LineNumber, Line
 
 
 
