@@ -14,6 +14,8 @@ $cache = "C:\Users\rt.OneIMTools.DEV\.nuget\packages"
 $assemblyCache = "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache"
 ```
 
+Run these variable assignments at the start of every new PowerShell session before using the commands below.
+
 OIM vendor package baseline:
 
 ```text
