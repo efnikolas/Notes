@@ -1,3 +1,11 @@
+Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -Filter NuGet.Config -ErrorAction SilentlyContinue |
+  Select-Object FullName, LastWriteTime |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 5
+
+
+
+
 $oimpath = "D:\Program Files\OneIdentity\One Identity Manager v10"
 $cache = "C:\Users\rt.OneIMTools.DEV\.nuget\packages"
 $pocRoot = "D:\NuGet-PoC"
