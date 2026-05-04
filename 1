@@ -1,3 +1,11 @@
+Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -Filter nuget.config -ErrorAction SilentlyContinue | Select-Object FullName
+
+
+
+
+
+
+
 $baseline = Get-ChildItem "$oimpath\NuGet" -Filter *.nupkg |
   ForEach-Object {
     if ($_.BaseName -match "^(?<id>.+)\.(?<version>\d+\.\d+\.\d+-\d+)$") {
