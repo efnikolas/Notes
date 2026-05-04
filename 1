@@ -33,3 +33,16 @@ $delta |
     }
   } |
   Export-Csv "$env:TEMP\nuget-delta-after-compile.csv" -NoTypeInformation
+
+
+$after |
+  Sort-Object |
+  ForEach-Object {
+    $parts = $_ -split "\|", 2
+    [PSCustomObject]@{
+      PackageId = $parts[0]
+      Version = $parts[1]
+      Evidence = "Present in global-packages after clean DEV compile"
+    }
+  } |
+  Export-Csv "$env:TEMP\nuget-all-after-compile.csv" -NoTypeInformation
