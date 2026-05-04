@@ -1,3 +1,13 @@
+
+Get-ChildItem "$env:USERPROFILE" -Recurse -Filter NuGet.Config -ErrorAction SilentlyContinue |
+  Select-Object FullName, LastWriteTime |
+  Sort-Object LastWriteTime -Descending |
+  Select-Object -First 30
+
+
+
+
+
 Get-ChildItem "$env:USERPROFILE\AppData\Local\One Identity\One Identity Manager\AssemblyCache" -Recurse -File -ErrorAction SilentlyContinue | Select-String -Pattern "ExternalNugetSource","nexus","nuget.org" | Select-Object Path, LineNumber, Line
 
 
