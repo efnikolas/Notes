@@ -85,6 +85,9 @@ if (-not $Prepare -and -not $Generate) {
     Write-Host "  .\scripts\Capture-OimNuGetPackages.ps1 -Prepare"
     Write-Host "  # run OIM compile"
     Write-Host "  .\scripts\Capture-OimNuGetPackages.ps1 -Generate -RepoNuGetRoot .\nuget -CopyPackages"
+    Write-Host ""
+    Write-Host "Without -CopyPackages, -Generate only writes manifest CSVs to -OutputDir."
+    Write-Host "Commit generated manifests/package folder to the backend repository in a later step."
     exit 1
 }
 
@@ -175,5 +178,13 @@ if ($Generate) {
             Copy-Item $deltaManifestPath (Join-Path $repoManifestDir "nuget-delta-manifest.csv") -Force
             Write-Host "Copied manifests to: $repoManifestDir"
         }
+        else {
+            Write-Host "Package copy skipped because -CopyPackages was not provided."
+            Write-Host "Review the manifests, then commit/update the package folder in the backend repository as a separate step."
+        }
+    }
+    else {
+        Write-Host "No -RepoNuGetRoot provided. Manifests were generated only in: $OutputDir"
+        Write-Host "Commit these manifests and the promoted package folder to the backend repository in a later step."
     }
 }

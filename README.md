@@ -47,11 +47,25 @@ The script in this repository automates the repeatable parts:
 .\scripts\Capture-OimNuGetPackages.ps1 -Generate -RepoNuGetRoot .\nuget -CopyPackages
 ```
 
+`-Generate` only creates manifest CSVs unless `-CopyPackages` is provided. Use `-CopyPackages` when the script should copy the rebuilt `global-packages` content into the repository package folder.
+
+If `-CopyPackages` is not used, review the generated manifests and commit the package folder/manifests to the backend repository in a separate step.
+
 Use `-ClearAssemblyCache -Force` only on a dedicated build account/agent with all OIM tools closed:
 
 ```powershell
 .\scripts\Capture-OimNuGetPackages.ps1 -Prepare -ClearAssemblyCache -Force
 ```
+
+## Diff Timing
+
+The reliable diff happens after a clean compile, because only then do we have the resolved package set including transitive dependencies.
+
+```text
+clean cache -> compile -> generate fresh manifest -> compare with repo manifest
+```
+
+A pre-compile diff can only compare the existing repository manifest with some previously generated manifest. It cannot know whether the current code introduces new transitive dependencies until OIM compile/restore has run.
 
 ## Manual: Clean The Build Account
 
