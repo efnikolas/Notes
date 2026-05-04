@@ -192,7 +192,42 @@ Interpretation:
 - If `deps-json-extra-packages.txt` has entries, `.deps.json` contains packages not found in `global-packages`.
 - If there are differences, use `global-packages` after clean compile as the source of truth and keep `.deps.json` only as a cross-check.
 
-## 11. Optional: Run Repository Script Instead
+## 11. Verify Missing Packages Are Absent From deps.json
+
+If `deps-json-missing-global-packages.txt` contains packages, verify that the script did not miss them by searching the fresh `.deps.json` files directly.
+
+Use the same `$CompileWindowStart` from the fresh compile check:
+
+```powershell
+Get-ChildItem $AssemblyCache -Recurse -Filter *.deps.json -File -ErrorAction SilentlyContinue |
+  Where-Object { $_.LastWriteTime -ge $CompileWindowStart } |
+  Select-String -Pattern "microsoft.codeanalysis.analyzers","pollysharp" |
+  Select-Object Path, LineNumber, Line
+```
+
+If this returns no rows, those packages are genuinely absent from the fresh `.deps.json` files.
+
+Also list the exact `.deps.json` files that were included in the check:
+
+```powershell
+Get-ChildItem $AssemblyCache -Recurse -Filter *.deps.json -File -ErrorAction SilentlyContinue |
+  Where-Object { $_.LastWriteTime -ge $CompileWindowStart } |
+  Select-Object FullName, LastWriteTime, Length |
+  Sort-Object LastWriteTime -Descending
+```
+
+Expected interpretation for the current observed result:
+
+```text
+global-packages after compile: 147
+deps.json package entries:     145
+missing from deps.json:        microsoft.codeanalysis.analyzers|3.11.0, pollysharp|1.15.0
+extra in deps.json:            0
+```
+
+If the direct `Select-String` search also returns no rows for those packages, `.deps.json` is not complete enough to be the source of truth. Use `global-packages` after clean compile instead.
+
+## 12. Optional: Run Repository Script Instead
 
 The repository script performs the same comparison:
 
